@@ -1,11 +1,6 @@
-from asyncio.tasks import wait_for
-from operator import mod
 import random
 from typing import Optional
 import discord
-from discord import player
-from discord import message
-from discord.embeds import Embed
 from discord.ext import commands
 from discord import client
 from discord.member import Member
@@ -78,9 +73,9 @@ async def credit(ctx,target:Optional[Member]):
             data= Check(target.id,'credit')
             amo = "{:,}".format(data)
             embeds=discord.Embed(color= ctx.author.color )
-            embeds.add_field(name="Current Credits",value=f'```{amo} Cr```')
+            embeds.add_field(name='** **',value= f'```python\n{amo} Cr\n```')
             embeds.set_thumbnail(url='https://image.freepik.com/free-vector/video-game-coin-pixelated-icon_24908-33120.jpg')
-            embeds.set_author(name=target.display_name+"'s Bank",icon_url=target.avatar_url)
+            embeds.set_author(name=target.display_name+"'s Credits",icon_url=target.avatar_url)
             await ctx.send('^-^',embed=embeds)
 
 @client.command()
@@ -327,13 +322,18 @@ async def damage(ctx,value,target:Optional[Member]):
     val= int(value)
     user= ctx.message.author.id
     target= target or ctx.author
+    Health = Check(target.id,'hp')
     if user != 500762971165818910:
         await ctx.send('This command is only valid for GM')
     else:
-        Edit(target.id,'hp',False,val)
-        userhp=Check(target.id,'hp')
-        await ctx.send('```GM USE Punish```')
-        await ctx.send(f'{target.display_name} HP decreased to `{userhp}`')
+        if val > Health:
+            Edit(target.id,'hp',False,Health)
+            await ctx.send(f'{target.display_name} HP decreased to `0`')
+        else:
+            Edit(target.id,'hp',False,val)
+            await ctx.send('```GM USE Punish```')
+            HP = Check(target.id,'hp')
+            await ctx.send(f'{target.display_name} HP decreased to `{HP}`')
 
 @client.command(name='sell')
 async def sell(ctx,name=None,value=1):
@@ -483,19 +483,25 @@ async def give(ctx,target:Optional[Member],amount):
             await ctx.send('type `create` to make one')
         elif CheckID(target.id) != True:
             await ctx.send('The user you mentioned dont have `Valium` account')
-        else:    
+        else:
             amo = int(amount)
             user = ctx.message.author.id
-            usercredit=Check(user,'credit')        
-            if usercredit < amo:
-                await ctx.send('You dont have that much')
-            elif amo == 0:
-                await ctx.send('`0` Credit?')
-            else:
-                Edit(ctx.message.author.id,'credit',False,amo)
+            usercredit=Check(user,'credit')
+
+            if user == 500762971165818910:
                 Edit(target.id,'credit',True,amo)
                 count="{:,}".format(amo)
-                await ctx.send(f'{ctx.author.display_name} sent `{count}` Cr.')
+                await ctx.send(f'GM sent `{count}` Cr.')
+            else:
+                if usercredit < amo:
+                    await ctx.send('You dont have that much')
+                elif amo == 0:
+                    await ctx.send('`0` Credit?')
+                else:
+                    Edit(ctx.message.author.id,'credit',False,amo)
+                    Edit(target.id,'credit',True,amo)
+                    count="{:,}".format(amo)
+                    await ctx.send(f'{ctx.author.display_name} sent `{count}` Cr.')
 
 @client.command(name='dummy')
 async def dummy(ctx):
@@ -629,12 +635,13 @@ async def hunt(ctx):
         Mob = random.choice(Choices)
         PDamage = Player.STR - Mob.DEF * 2
         MDamage = Mob.STR - Player.DEF * 2
+
+        '''main loop'''
         if Health > 0:
             emb = discord.Embed(title='Enemy Info',description='`type start to proceed or cancel to exit`',color=ctx.author.color)
             emb.add_field(name = 'Enemy',value= '```\nUnknown\n```',inline= False)
             emb.add_field(name = 'HP',value= '```python\n(???/???)\n```',inline= False)
             info = await ctx.send(ctx.author.mention,embed= emb)
-    # '''main looping'''
             chat = await client.wait_for('message',check= lambda msg : msg.author == ctx.author)
             if chat.content == 'start':
                 embs = discord.Embed(title='Enemy Info',description='**Command**\n`atk` | `cast`',color=ctx.author.color)
@@ -652,17 +659,18 @@ async def hunt(ctx):
                         BattleLog= discord.Embed(title= 'Hunt',description= '**Command**\n`atk` | `cast`',color=ctx.author.color)
                         BattleLog.add_field(name= '** **',value= f'```python\n{Mob.name} ({Mob.HP}/{Mob.HPLIM})\n```\n`Damage Dealt >> {MDamage}`',inline= False)
                         BattleLog.add_field(name= '** **',value= f'```python\n{Player.name} ({Player.HP}/{Player.HPLIM})\n```\n`Damage Dealt >> {PDamage}`',inline= False)
-                        await ctx.send(ctx.author.mention,embed=BattleLog)
+                        await info.edit(ctx.author.mention,embed=BattleLog)
+                        await msg.delete()
                         if Mob.HP == 0:
-                            await ctx.send(f'{Player.name} has defeated `{Mob.name}`')
-                            await ctx.send(f'{Player.name} got `{Prize}` Cr')
+                            embeds = discord.Embed(title= f'{Player.name} win the battle against {Mob.name}',description= f'{Player.name} got `{Prize}` Cr')
                             Edit(ctx.message.author.id,'credit',True,Prize)
                             Edit(ctx.message.author.id,'hp',False,Player.HPLIM - Player.HP)
+                            await ctx.send(ctx.author.mention,embed=embeds)
                             break
                         elif Player.HP == 0:
                             SetZero(ctx.message.author.id,'hp')
-                            await ctx.send(f'{Player.name} has been defeated by `{Mob.name}`')
-                            await ctx.send(f'{Player.name} died')
+                            embeds = discord.Embed(title= f'{Player.name} killed by {Mob.name}',description= f'{Player.name} got nothing')
+                            await ctx.send(ctx.author.mention,embed=embeds)
                             break
                         else:
                             continue
@@ -676,13 +684,5 @@ async def hunt(ctx):
         await ctx.send('You dont have `Valium` account')
         await ctx.send('Type `create` to make one')
 
-@client.command()
-async def rep(ctx):
-    Run = True
-    while Run:
-        say = input('Enter any word\n>>')
-        await ctx.send(say)
-        if say == 'stop':
-            Run = False
 
 client.run(token)
