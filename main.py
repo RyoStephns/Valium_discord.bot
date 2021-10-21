@@ -624,44 +624,43 @@ async def hunt(ctx):
                 self.MP = MP
                 self.MPLIM = MPLIM
             
-            def Attack(self,Mob):
-                global MobDamage
-                global PlayerDamage
-                Player_str= [Player.STR,str(Player.STR)]
-                string = len(Player_str[1])
-                if string > 2:
-                    Player_str[0] -= 4
-                    rand = randint(1,7)
-                    Player_str[0] += rand
-                else:
-                    Player_str[0] -= 3
-                    rand = randint(1,4)
-                    Player_str[0] += rand
-                Mob.HP =- Player_str[0] - Mob.DEF*2
-                PlayerDamage = Mob.HP =- Player_str[0] - Mob.DEF*2
-
-                Mob_str= [Mob.STR,str(Mob.STR)]
-                string = len(Mob_str[1])
-                if string > 2:
-                    Mob_str[0] -= 4
-                    rand = randint(1,7)
-                    Mob_str[0] += rand
-                else:
-                    Mob_str[0] -= 3
-                    rand = randint(1,4)
-                    Mob_str[0] += rand
-                Player.HP =- Mob_str[0] - Player.DEF*2
-                MobDamage = Player.HP =- Mob_str[0] - Player.DEF*2
-            def Damage(self):
-                if self.types == 'Mob':
-                    return MobDamage
-                elif self.types == 'Player':
-                    return PlayerDamage
+            def Attack(self):
+                global Pdmg,Mdmg
+                pdamage,string = Player.STR,str(Player.STR)
+                randomize = [randint(0,2),randint(0,4),randint(0,20)]
+                if len(string) == 1:
+                    pdamage -= randomize[0]
+                    Mob.HP -= pdamage
+                    Pdmg = pdamage
+                elif len(string) == 2:
+                    pdamage -= randomize[1]
+                    Mob.HP -= pdamage
+                    Pdmg = pdamage
+                elif len(string) == 3:
+                    pdamage -= randomize[2]
+                    Mob.HP -= pdamage
+                    Pdmg = pdamage
+                '''MOB'''
+                mdamage,string = Mob.STR,str(Mob.STR)
+                randomize = [randint(0,2),randint(0,4),randint(0,20)]
+                if len(string) == 1:
+                    mdamage -= randomize[0]
+                    Player.HP -= mdamage
+                    Mdmg = mdamage
+                elif len(string) == 2:
+                    mdamage -= randomize[1]
+                    Player.HP -= mdamage
+                    Mdmg = mdamage
+                elif len(string) == 3:
+                    mdamage -= randomize[2]
+                    Player.HP -= mdamage
+                    Mdmg = mdamage
+                              
         '''Define'''
         
         Player = Players('Player',ctx.author.display_name,Health,hplimit,Attack,Int,Defence,Mp,mplimit)
-        Goblin,Rat = Players('Mob','Goblin',15,15,15,0,1,10,10),Players('Mob','Rat',10,10,12,0,0,15,15)
-        Choices = [Goblin,Rat]
+        Goblin,Rat,Slime,Boar = Players('Mob','Goblin',30,30,10,0,1,10,10),Players('Mob','Rat',20,20,9,0,0,15,15),Players('Mob','Slime',50,50,5,0,2,15,15),Players('Mob','Boar',30,30,9,0,2,15,15)
+        Choices = [Goblin,Rat,Slime,Boar]
         Prize = random.randint(100,300)
         Mob = random.choice(Choices)
         
@@ -696,15 +695,15 @@ async def hunt(ctx):
                 while Run:
                     msg = await client.wait_for('message', check= lambda i : i.author == ctx.author)
                     if msg.content == 'atk':
-                        Player.Attack(Mob)
+                        Player.Attack()
                         if Mob.HP < 0:
                             Mob.HP = 0
                         elif Player.HP < 0:
                             Player.HP = 0
                         await msg.delete()
                         BattleLog= discord.Embed(title= 'Battle is ongoing',description= '**Command**\n`atk` | `cast`',color=ctx.author.color)
-                        BattleLog.add_field(name= f'{Player.name}',value= f'```python\nHP({Player.HP}/{Player.HPLIM}) | MP({Player.MP}/{Player.MPLIM})```\n```Damage >> {PlayerDamage}```',inline= False)
-                        BattleLog.add_field(name= f'{Mob.name}',value= f'```python\nHP({Mob.HP}/{Mob.HPLIM}) | MP({Mob.MP}/{Mob.MPLIM})```\n```Damage >> {MobDamage}```',inline= False)
+                        BattleLog.add_field(name= f'{Player.name}',value= f'```python\nHP({Player.HP}/{Player.HPLIM}) | MP({Player.MP}/{Player.MPLIM})```\n```Damage >> {Pdmg}```',inline= False)
+                        BattleLog.add_field(name= f'{Mob.name}',value= f'```python\nHP({Mob.HP}/{Mob.HPLIM}) | MP({Mob.MP}/{Mob.MPLIM})```\n```Damage >> {Mdmg}```',inline= False)
                         await info.edit(ctx.author.mention,embed=BattleLog)
                         
                         if Mob.HP == 0:
