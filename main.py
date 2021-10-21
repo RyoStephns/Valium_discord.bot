@@ -1,9 +1,12 @@
+from asyncio.tasks import sleep
 import random
 from typing import Optional
 import discord
+from discord import embeds
 from discord.ext import commands
 from discord import client
 from discord.member import Member
+from discord.user import User
 from discord_components import *
 from random import randint
 import asyncio
@@ -71,12 +74,12 @@ async def credit(ctx,target:Optional[Member]):
             await ctx.send('The user you mentioned dont have `Valium` account')
         elif CheckID(target.id) == True:
             data= Check(target.id,'credit')
-            amo = "{:,}".format(data)
+            credit = "{:,}".format(data)
             embeds=discord.Embed(color= ctx.author.color )
-            embeds.add_field(name='** **',value= f'```python\n{amo} Cr\n```')
+            embeds.add_field(name='** **',value= f'```python\n{credit} Cr\n```')
             embeds.set_thumbnail(url='https://image.freepik.com/free-vector/video-game-coin-pixelated-icon_24908-33120.jpg')
             embeds.set_author(name=target.display_name+"'s Credits",icon_url=target.avatar_url)
-            await ctx.send('^-^',embed=embeds)
+            await ctx.send(ctx.author.mention,embed=embeds)
 
 @client.command()
 async def ping(ctx):
@@ -87,6 +90,7 @@ async def help(ctx):
     prefix_embed= discord.Embed(title='Commands', color= ctx.author.color )
     prefix_embed.add_field(name = 'General',value = '`info` | `help` | `ping`',inline= False)
     prefix_embed.add_field(name = 'Gamble',value = '`dice`',inline= False)
+    prefix_embed.add_field(name = 'Battle',value = '`Hunt`',inline= False)
     prefix_embed.add_field(name = 'Account',value = '`create` | `profile` | `bag` | `use`',inline= False)
     prefix_embed.add_field(name = 'Economy',value = '`credit` | `shop` | `buy` | `sell` | `give(amount)(mention)`',inline= False)
     prefix_embed.set_thumbnail(url=ctx.author.avatar_url)
@@ -152,6 +156,7 @@ async def profile(ctx,target:Optional[Member]):
         Level= Check(target.id,'lvl')
         Exp= Check(target.id,'exp')
         Expup= Check(target.id,'expup')
+        
         prof= discord.Embed(title=f'*Level*  `{Level}`\n*EXP*   `{Exp}/{Expup}`',description=f'*Class* : `None`',color=ctx.author.color)
         Hp =f'```python\n({Health}/{hplimit})\n```'
         mp =f'```python\n({Mp}/{mplimit})\n```'
@@ -290,9 +295,11 @@ async def use(ctx,item=None):
                     await ctx.send('Your `HP` is full')
                 else:
                     PotionS.use()
-                    HP= Check(user,'hp')
+                    HP = Check(user,'hp')
+                    HPLIM = Check(user,'hplim')
+                    After_Potion = discord.Embed(title = 'HP Restored', description = f'{HP}/{HPLIM}',color = ctx.author.color)
                     EditUsable(user,'pots',False,1)
-                    await ctx.send(f'`HP` restored \nCurrent:`{HP}`')
+                    await ctx.send(ctx.author.mention,embed = After_Potion)
             elif item == 'potion-m':
                 potm=CheckUsable(user,'potm')
                 if potm == 0:
@@ -301,9 +308,11 @@ async def use(ctx,item=None):
                     await ctx.send('Your `HP`is full')
                 else:
                     PotionM.use()
-                    HP= Check(user,'hp')
+                    HP = Check(user,'hp')
+                    HPLIM = Check(user,'hplim')
+                    After_Potion = discord.Embed(title = 'HP Restored', description = f'{HP}/{HPLIM}',color = ctx.author.color)
                     EditUsable(user,'potm',False,1)
-                    await ctx.send(f'`HP` restored \nCurrent:`{HP}`')
+                    await ctx.send(ctx.author.mention,embed = After_Potion)
 
             elif item == 'potion-l':
                 potl=CheckUsable(user,'potl')
@@ -313,9 +322,11 @@ async def use(ctx,item=None):
                     await ctx.send('Your `HP` is full')
                 else:
                     PotionL.use()
-                    HP= Check(user,'hp')
+                    HP = Check(user,'hp')
+                    HPLIM = Check(user,'hplim')
+                    After_Potion = discord.Embed(title = 'HP Restored', description = f'{HP}/{HPLIM}',color = ctx.author.color)
                     EditUsable(user,'potl',False,1)
-                    await ctx.send(f'`HP` restored \nCurrent:`{HP}`')
+                    await ctx.send(ctx.author.mention,embed = After_Potion)
 
 @client.command(name='punish')
 async def damage(ctx,value,target:Optional[Member]):
@@ -600,18 +611,10 @@ async def hunt(ctx):
     Player = CheckID(ctx.message.author.id)
     if Player == True:
         id = ctx.message.author.id
-        Health= Check(id,'hp')
-        hplimit= Check(id,'hplim')
-        mplimit= Check(id,'mplim')
-        Attack= Check(id,'str')
-        Defence= Check(id,'def')
-        Vit= Check(id,'vit')
-        Mp= Check(id,'mp')
-        Int= Check(id,'intel')
-        Exp= Check(id,'exp')
-        Expup= Check(id,'expup')
+        Health,hplimit,mplimit,Attack,Defence,Mp,Int= Check(id,'hp'),Check(id,'hplim'),Check(id,'mplim'),Check(id,'str'),Check(id,'def'),Check(id,'mp'),Check(id,'intel')
         class Players():
-            def __init__(self,name,HP,HPLIM,STR,INT,DEF,MP):
+            def __init__(self,types,name,HP,HPLIM,STR,INT,DEF,MP,MPLIM):
+                self.types = types
                 self.name = name
                 self.HP = HP
                 self.HPLIM = HPLIM
@@ -619,36 +622,78 @@ async def hunt(ctx):
                 self.INT = INT
                 self.DEF = DEF
                 self.MP = MP
+                self.MPLIM = MPLIM
+            
             def Attack(self,Mob):
-                PDamage = Player.STR - Mob.DEF * 2
-                Mob.HP -= PDamage
-                
-                MDamage = Mob.STR - Player.DEF * 2
-                Player.HP -= MDamage
-        '''Define Objects'''
-        Player = Players(ctx.author.display_name,Health,hplimit,Attack,Int,Defence,Mp)
-        Goblin,Rat = Players('Goblin',15,15,15,0,1,0),Players('Rat',10,10,12,0,0,0)
-        Choices = [Goblin,Rat]
-        Prize = random.randint(15,30)
-        
-        '''Create variables'''
-        Mob = random.choice(Choices)
-        PDamage = Player.STR - Mob.DEF * 2
-        MDamage = Mob.STR - Player.DEF * 2
+                global MobDamage
+                global PlayerDamage
+                Player_str= [Player.STR,str(Player.STR)]
+                string = len(Player_str[1])
+                if string > 2:
+                    Player_str[0] -= 4
+                    rand = randint(1,7)
+                    Player_str[0] += rand
+                else:
+                    Player_str[0] -= 3
+                    rand = randint(1,4)
+                    Player_str[0] += rand
+                Mob.HP =- Player_str[0] - Mob.DEF*2
+                PlayerDamage = Mob.HP =- Player_str[0] - Mob.DEF*2
 
-        '''main loop'''
-        if Health > 0:
+                Mob_str= [Mob.STR,str(Mob.STR)]
+                string = len(Mob_str[1])
+                if string > 2:
+                    Mob_str[0] -= 4
+                    rand = randint(1,7)
+                    Mob_str[0] += rand
+                else:
+                    Mob_str[0] -= 3
+                    rand = randint(1,4)
+                    Mob_str[0] += rand
+                Player.HP =- Mob_str[0] - Player.DEF*2
+                MobDamage = Player.HP =- Mob_str[0] - Player.DEF*2
+            def Damage(self):
+                if self.types == 'Mob':
+                    return MobDamage
+                elif self.types == 'Player':
+                    return PlayerDamage
+        '''Define'''
+        
+        Player = Players('Player',ctx.author.display_name,Health,hplimit,Attack,Int,Defence,Mp,mplimit)
+        Goblin,Rat = Players('Mob','Goblin',15,15,15,0,1,10,10),Players('Mob','Rat',10,10,12,0,0,15,15)
+        Choices = [Goblin,Rat]
+        Prize = random.randint(100,300)
+        Mob = random.choice(Choices)
+        
+        '''Start'''
+        if Player.HP == 0:
+            await ctx.send('Your HP is `0`')
+        else:                       
+            '''main loop'''
             emb = discord.Embed(title='Enemy Info',description='`type start to proceed or cancel to exit`',color=ctx.author.color)
-            emb.add_field(name = 'Enemy',value= '```\nUnknown\n```',inline= False)
-            emb.add_field(name = 'HP',value= '```python\n(???/???)\n```',inline= False)
+            emb.add_field(name = 'Enemy',value= '```\nUndefined\n```',inline= False)
+            emb.add_field(name = 'Stats',value= '```python\nHP (???/???) | DEF (Unknown) | STR (Unknown)\n```',inline= False)
             info = await ctx.send(ctx.author.mention,embed= emb)
-            chat = await client.wait_for('message',check= lambda msg : msg.author == ctx.author)
-            if chat.content == 'start':
-                embs = discord.Embed(title='Enemy Info',description='**Command**\n`atk` | `cast`',color=ctx.author.color)
-                embs.add_field(name = 'Enemy',value= f'```python\n{Mob.name}\n```',inline= False)
-                embs.add_field(name = 'HP',value= f'```python\n({Mob.HP}/{Mob.HPLIM})```',inline= False)
-                await info.edit(embed=embs)
-                while True:
+            
+            Start = True
+            while Start:
+                chat = await client.wait_for('message',check= lambda msg : msg.author == ctx.author)
+                if chat.content == 'start':
+                    await chat.delete()
+                    embs = discord.Embed(title='Enemy Info',description='**Command**\n`atk` | `cast`',color=ctx.author.color)
+                    embs.add_field(name = 'Enemy',value= f'```python\n{Mob.name}\n```',inline= False)
+                    embs.add_field(name = 'Stats',value= f'```python\nHP({Mob.HP}/{Mob.HPLIM}) | DEF({Mob.DEF}) | STR({Mob.STR})```',inline= False)
+                    await info.edit(embed=embs)
+                    break
+                elif chat.content == 'cancel':
+                    await chat.delete()
+                    await ctx.send('Player has cancelled the command')
+                    Start = False
+                else:
+                    await chat.delete()
+            if Start == True:
+                Run = True
+                while Run:
                     msg = await client.wait_for('message', check= lambda i : i.author == ctx.author)
                     if msg.content == 'atk':
                         Player.Attack(Mob)
@@ -656,33 +701,41 @@ async def hunt(ctx):
                             Mob.HP = 0
                         elif Player.HP < 0:
                             Player.HP = 0
-                        BattleLog= discord.Embed(title= 'Hunt',description= '**Command**\n`atk` | `cast`',color=ctx.author.color)
-                        BattleLog.add_field(name= '** **',value= f'```python\n{Mob.name} ({Mob.HP}/{Mob.HPLIM})\n```\n`Damage Dealt >> {MDamage}`',inline= False)
-                        BattleLog.add_field(name= '** **',value= f'```python\n{Player.name} ({Player.HP}/{Player.HPLIM})\n```\n`Damage Dealt >> {PDamage}`',inline= False)
-                        await info.edit(ctx.author.mention,embed=BattleLog)
                         await msg.delete()
+                        BattleLog= discord.Embed(title= 'Battle is ongoing',description= '**Command**\n`atk` | `cast`',color=ctx.author.color)
+                        BattleLog.add_field(name= f'{Player.name}',value= f'```python\nHP({Player.HP}/{Player.HPLIM}) | MP({Player.MP}/{Player.MPLIM})```\n```Damage >> {PlayerDamage}```',inline= False)
+                        BattleLog.add_field(name= f'{Mob.name}',value= f'```python\nHP({Mob.HP}/{Mob.HPLIM}) | MP({Mob.MP}/{Mob.MPLIM})```\n```Damage >> {MobDamage}```',inline= False)
+                        await info.edit(ctx.author.mention,embed=BattleLog)
+                        
                         if Mob.HP == 0:
-                            embeds = discord.Embed(title= f'{Player.name} win the battle against {Mob.name}',description= f'{Player.name} got `{Prize}` Cr')
+                            embeds = discord.Embed(title= f'{Player.name} win the battle against {Mob.name} :tada:',description= f'{Player.name} got `{Prize}` Cr',color=ctx.author.color)
                             Edit(ctx.message.author.id,'credit',True,Prize)
-                            Edit(ctx.message.author.id,'hp',False,Player.HPLIM - Player.HP)
+                            Set(ctx.message.author.id,'hp',Player.HP)
                             await ctx.send(ctx.author.mention,embed=embeds)
-                            break
+                            Run = False
                         elif Player.HP == 0:
                             SetZero(ctx.message.author.id,'hp')
-                            embeds = discord.Embed(title= f'{Player.name} killed by {Mob.name}',description= f'{Player.name} got nothing')
+                            embeds = discord.Embed(title= f'{Player.name} killed by {Mob.name}',description= f'{Player.name} got nothing',color=ctx.author.color)
                             await ctx.send(ctx.author.mention,embed=embeds)
-                            break
+                            Run = False
                         else:
                             continue
-            elif chat.content == 'cancel':
-                await ctx.send('Player has cancelled the command')
-            else:
-                pass
-        elif Health == 0:
-            await ctx.send('Your `HP` is 0')
-    elif Player == False:
+                    elif msg.content == 'cast':
+                        await msg.delete()
+                        alert=await ctx.send('This command is not available yet')
+                        await sleep(1)
+                        await alert.delete()
+                    else:
+                        await msg.delete()              
+    else:
         await ctx.send('You dont have `Valium` account')
         await ctx.send('Type `create` to make one')
 
-
+@client.command()
+async def edit(ctx,name,ToF,value):
+    if ToF == 'False':
+        Edit(ctx.message.author.id,name,False,int(value))
+    elif ToF == 'True':
+        Edit(ctx.message.author.id,name,True,int(value))
+    await ctx.send('Stats Updated')
 client.run(token)
