@@ -110,6 +110,13 @@ def Edit(id=None,typ=None,add=True,val=None):
     conn.commit()
     conn.close()
 
+def Set(id=None,typ=None,val=None):
+    conn = sql.connect('data.db')
+    c= conn.cursor()
+    c.execute(f"SELECT {typ} FROM players WHERE id = '{id}'")
+    c.execute(f"UPDATE players SET {typ} = '{val}' WHERE id = '{id}' ")
+    conn.commit()
+    conn.close()
 def SetZero(id,typ):
     conn = sql.connect('data.db')
     c= conn.cursor()
